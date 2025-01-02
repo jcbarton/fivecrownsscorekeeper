@@ -303,7 +303,9 @@ const FiveCrownsScorekeeper = () => {
           <p className="text-gray-500 text-center">No players added yet</p>
         ) : (
           <div className="space-y-2">
-            {players.map(player => (
+            {[...players]
+              .sort((a, b) => b.totalScore - a.totalScore)
+              .map(player => (
               <div 
                 key={player.id} 
                 className="bg-white shadow rounded-lg p-4 flex justify-between items-center"
@@ -330,7 +332,7 @@ const FiveCrownsScorekeeper = () => {
           onClick={beginRoundScoring}
           className="w-full bg-green-500 text-white py-3 rounded hover:bg-green-600 flex items-center justify-center"
         >
-          Start Next Round
+          Enter scores for wild card {currentWildCard}
         </button>
       )}
 

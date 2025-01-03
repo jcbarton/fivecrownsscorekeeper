@@ -113,10 +113,16 @@ const FiveCrownsScorekeeper = () => {
       const stats = newStats[score.id];
       const roundScore = score.roundScore;
       
-      // Update averages
-      stats.avgScore = playerRounds.reduce((sum, r) => 
+      // Update averages - ensure it's always a number
+      const sumOfScores = playerRounds.reduce((sum, r) => 
         sum + r.scores.find(s => s.id === score.id).roundScore, 0
-      ) / playerRounds.length;
+      );
+      stats.avgScore = playerRounds.length > 0 ? sumOfScores / playerRounds.length : 0;
+
+      // Ensure avgScore is a number
+      if (isNaN(stats.avgScore)) {
+        stats.avgScore = 0;
+      }
 
       // Update best/worst rounds
       stats.bestRound = Math.min(stats.bestRound, roundScore);

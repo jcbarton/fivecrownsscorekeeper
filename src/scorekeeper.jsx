@@ -1,19 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, PlusCircle, Trash2, Trophy, TrendingUp, Award } from 'lucide-react';
 
+const STORAGE_KEY = 'fivecrowns_game_state';
+
 const FiveCrownsScorekeeper = () => {
   // Possible wild cards for Five Crowns
   const WILD_CARDS = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
+  // Load initial state from localStorage
+  const loadInitialState = () => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Error loading game state from localStorage:', e);
+    }
+    return null;
+  };
+
+  const savedState = loadInitialState();
+
   // State for players
-  const [players, setPlayers] = useState([]);
+  const [players, setPlayers] = useState(savedState?.players || []);
   const [newPlayerName, setNewPlayerName] = useState('');
   
   // State for game tracking
-  const [rounds, setRounds] = useState([]);
-  const [currentRound, setCurrentRound] = useState(1);
-  const [currentWildCard, setCurrentWildCard] = useState('3');
-  const [currentDealer, setCurrentDealer] = useState(null);
+  const [rounds, setRounds] = useState(savedState?.rounds || []);
+  const [currentRound, setCurrentRound] = useState(savedState?.currentRound || 1);
+  const [currentWildCard, setCurrentWildCard] = useState(savedState?.currentWildCard || '3');
+  const [currentDealer, setCurrentDealer] = useState(savedState?.currentDealer || null);
   
   // Modal visibility states
   const [isAddPlayerModalVisible, setIsAddPlayerModalVisible] = useState(false);
@@ -24,8 +41,26 @@ const FiveCrownsScorekeeper = () => {
   const [currentRoundScores, setCurrentRoundScores] = useState({});
 
   // New state for statistics
-  const [playerStats, setPlayerStats] = useState({});
-  const [achievements, setAchievements] = useState({});
+  const [playerStats, setPlayerStats] = useState(savedState?.playerStats || {});
+  const [achievements, setAchievements] = useState(savedState?.achievements || {});
+
+  // Save game state to localStorage whenever relevant state changes
+  useEffect(() => {
+    const gameState = {
+      players,
+      rounds,
+      currentRound,
+      currentWildCard,
+      currentDealer,
+      playerStats,
+      achievements
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+    } catch (e) {
+      console.error('Error saving game state to localStorage:', e);
+    }
+  }, [players, rounds, currentRound, currentWildCard, currentDealer, playerStats, achievements]);
 
   // Add a new player
   const addPlayer = () => {
@@ -79,7 +114,14 @@ const FiveCrownsScorekeeper = () => {
     setCurrentRound(1);
     setCurrentWildCard('3');
     setCurrentDealer(null);
+    setPlayerStats({});
+    setAchievements({});
     setIsGameOverModalVisible(false);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      console.error('Error clearing game state from localStorage:', e);
+    }
   };
 
   // Start entering scores for the current round

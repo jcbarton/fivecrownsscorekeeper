@@ -1,36 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AlertCircle, PlusCircle, Trash2, Trophy, TrendingUp, Award } from 'lucide-react';
 
 const STORAGE_KEY = 'fivecrowns_game_state';
+
+// Load initial state from localStorage (cached to avoid multiple calls)
+let cachedInitialState = null;
+let hasLoadedInitialState = false;
+
+const getInitialState = () => {
+  if (!hasLoadedInitialState) {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        cachedInitialState = JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Error loading game state from localStorage:', e);
+    }
+    hasLoadedInitialState = true;
+  }
+  return cachedInitialState;
+};
 
 const FiveCrownsScorekeeper = () => {
   // Possible wild cards for Five Crowns
   const WILD_CARDS = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
-  // Load initial state from localStorage
-  const loadInitialState = () => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error('Error loading game state from localStorage:', e);
-    }
-    return null;
-  };
+  // Track if component has been initialized to avoid saving empty state on first render
+  const isInitialized = useRef(false);
 
-  const savedState = loadInitialState();
-
-  // State for players
-  const [players, setPlayers] = useState(savedState?.players || []);
+  // State for players - use lazy initialization to load from localStorage only once
+  const [players, setPlayers] = useState(() => getInitialState()?.players || []);
   const [newPlayerName, setNewPlayerName] = useState('');
   
   // State for game tracking
-  const [rounds, setRounds] = useState(savedState?.rounds || []);
-  const [currentRound, setCurrentRound] = useState(savedState?.currentRound || 1);
-  const [currentWildCard, setCurrentWildCard] = useState(savedState?.currentWildCard || '3');
-  const [currentDealer, setCurrentDealer] = useState(savedState?.currentDealer || null);
+  const [rounds, setRounds] = useState(() => getInitialState()?.rounds || []);
+  const [currentRound, setCurrentRound] = useState(() => getInitialState()?.currentRound || 1);
+  const [currentWildCard, setCurrentWildCard] = useState(() => getInitialState()?.currentWildCard || '3');
+  const [currentDealer, setCurrentDealer] = useState(() => getInitialState()?.currentDealer || null);
   
   // Modal visibility states
   const [isAddPlayerModalVisible, setIsAddPlayerModalVisible] = useState(false);
@@ -41,11 +48,17 @@ const FiveCrownsScorekeeper = () => {
   const [currentRoundScores, setCurrentRoundScores] = useState({});
 
   // New state for statistics
-  const [playerStats, setPlayerStats] = useState(savedState?.playerStats || {});
-  const [achievements, setAchievements] = useState(savedState?.achievements || {});
+  const [playerStats, setPlayerStats] = useState(() => getInitialState()?.playerStats || {});
+  const [achievements, setAchievements] = useState(() => getInitialState()?.achievements || {});
 
   // Save game state to localStorage whenever relevant state changes
   useEffect(() => {
+    // Skip saving on initial mount to avoid overwriting saved state with potentially empty values
+    if (!isInitialized.current) {
+      isInitialized.current = true;
+      return;
+    }
+    
     const gameState = {
       players,
       rounds,

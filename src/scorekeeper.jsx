@@ -1,5 +1,84 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertCircle, PlusCircle, Trash2, Trophy, TrendingUp, Award } from 'lucide-react';
+import { AlertCircle, PlusCircle, Trash2, Trophy, TrendingUp, Award, Star, Flame, Target, Zap, Crown, Medal, Shield, Sparkles } from 'lucide-react';
+
+// Achievement definitions with icons, descriptions, and unlock conditions
+const ACHIEVEMENT_DEFINITIONS = {
+  'Perfect Round': {
+    icon: '🎯',
+    description: 'Score 0 points in a single round',
+    color: 'bg-green-100 text-green-800 border-green-300'
+  },
+  'Hot Streak': {
+    icon: '🔥',
+    description: 'Win 3 rounds in a row',
+    color: 'bg-orange-100 text-orange-800 border-orange-300'
+  },
+  'Consistency King': {
+    icon: '👑',
+    description: 'Maintain an average score under 10',
+    color: 'bg-purple-100 text-purple-800 border-purple-300'
+  },
+  'Comeback Kid': {
+    icon: '🦸',
+    description: 'Win a round after having the highest score in the previous round',
+    color: 'bg-blue-100 text-blue-800 border-blue-300'
+  },
+  'Early Bird': {
+    icon: '🐦',
+    description: 'Win the first round of a game',
+    color: 'bg-yellow-100 text-yellow-800 border-yellow-300'
+  },
+  'Closer': {
+    icon: '🏁',
+    description: 'Win the final round of a game',
+    color: 'bg-red-100 text-red-800 border-red-300'
+  },
+  'Sharpshooter': {
+    icon: '🎯',
+    description: 'Get 5 perfect rounds in a single game',
+    color: 'bg-emerald-100 text-emerald-800 border-emerald-300'
+  },
+  'Marathon Runner': {
+    icon: '🏃',
+    description: 'Complete a full 11-round game',
+    color: 'bg-indigo-100 text-indigo-800 border-indigo-300'
+  },
+  'Ice Cold': {
+    icon: '🧊',
+    description: 'Score the lowest in 5 consecutive rounds',
+    color: 'bg-cyan-100 text-cyan-800 border-cyan-300'
+  },
+  'Survivor': {
+    icon: '🛡️',
+    description: 'Complete a game without ever having the highest score in a round',
+    color: 'bg-gray-100 text-gray-800 border-gray-300'
+  },
+  'Rising Star': {
+    icon: '⭐',
+    description: 'Improve your round score 3 times in a row',
+    color: 'bg-amber-100 text-amber-800 border-amber-300'
+  },
+  'Crown Master': {
+    icon: '🏆',
+    description: 'Win a complete game of Five Crowns',
+    color: 'bg-yellow-200 text-yellow-900 border-yellow-400'
+  },
+  'Underdog': {
+    icon: '🐕',
+    description: 'Win after being in last place at some point',
+    color: 'bg-rose-100 text-rose-800 border-rose-300'
+  },
+  'Steady Hand': {
+    icon: '✋',
+    description: 'Have no round score exceed 20 in a complete game',
+    color: 'bg-teal-100 text-teal-800 border-teal-300'
+  },
+  'Speed Demon': {
+    icon: '⚡',
+    description: 'Get 3 perfect rounds in a single game',
+    color: 'bg-violet-100 text-violet-800 border-violet-300'
+  }
+};
 
 const STORAGE_KEY = 'fivecrowns_game_state';
 
@@ -104,7 +183,15 @@ const FiveCrownsScorekeeper = () => {
           highStreak: 0,
           currentLowStreak: 0,
           currentHighStreak: 0,
-          perfectRounds: 0
+          perfectRounds: 0,
+          totalRoundsPlayed: 0,
+          roundsWon: 0,
+          improvementStreak: 0,
+          currentImprovementStreak: 0,
+          lastRoundScore: null,
+          hadHighestScoreInGame: false,
+          wasInLastPlace: false,
+          maxRoundScore: 0
         }
       }));
 
@@ -159,14 +246,24 @@ const FiveCrownsScorekeeper = () => {
   // Calculate statistics after each round
   const updatePlayerStats = (roundScores) => {
     const newStats = { ...playerStats };
+    const minRoundScore = Math.min(...roundScores.map(s => s.roundScore));
+    const maxRoundScore = Math.max(...roundScores.map(s => s.roundScore));
+    const isFirstRound = rounds.length === 0;
+    const isFinalRound = currentWildCard === 'K';
+    
+    // Get previous round data for comeback detection
+    const previousRound = rounds.length > 0 ? rounds[rounds.length - 1] : null;
     
     roundScores.forEach(score => {
-      const playerRounds = rounds.filter(r => 
+      const playerRounds = [...rounds, { scores: roundScores }].filter(r => 
         r.scores.find(s => s.id === score.id)
       );
       
       const stats = newStats[score.id];
       const roundScore = score.roundScore;
+      
+      // Update totals
+      stats.totalRoundsPlayed = (stats.totalRoundsPlayed || 0) + 1;
       
       // Update averages - ensure it's always a number
       const sumOfScores = playerRounds.reduce((sum, r) => 
@@ -182,34 +279,167 @@ const FiveCrownsScorekeeper = () => {
       // Update best/worst rounds
       stats.bestRound = Math.min(stats.bestRound, roundScore);
       stats.worstRound = Math.max(stats.worstRound, roundScore);
+      stats.maxRoundScore = Math.max(stats.maxRoundScore || 0, roundScore);
 
       // Update streaks
-      const isLowest = Math.min(...roundScores.map(s => s.roundScore)) === roundScore;
-      const isHighest = Math.max(...roundScores.map(s => s.roundScore)) === roundScore;
+      const isLowest = minRoundScore === roundScore;
+      const isHighest = maxRoundScore === roundScore;
+
+      if (isLowest) {
+        stats.roundsWon = (stats.roundsWon || 0) + 1;
+      }
 
       stats.currentLowStreak = isLowest ? stats.currentLowStreak + 1 : 0;
       stats.currentHighStreak = isHighest ? stats.currentHighStreak + 1 : 0;
       stats.lowStreak = Math.max(stats.lowStreak, stats.currentLowStreak);
       stats.highStreak = Math.max(stats.highStreak, stats.currentHighStreak);
 
+      // Track if player ever had highest score or was in last place
+      if (isHighest) {
+        stats.hadHighestScoreInGame = true;
+      }
+      
+      // Check if player was in last place (highest total) at any point
+      const currentTotals = roundScores.map(s => ({ id: s.id, total: s.totalScore }));
+      const maxTotal = Math.max(...currentTotals.map(t => t.total));
+      if (score.totalScore === maxTotal && currentTotals.filter(t => t.total === maxTotal).length === 1) {
+        stats.wasInLastPlace = true;
+      }
+
+      // Track improvement streak (lower score than previous round)
+      if (stats.lastRoundScore !== null && roundScore < stats.lastRoundScore) {
+        stats.currentImprovementStreak = (stats.currentImprovementStreak || 0) + 1;
+        stats.improvementStreak = Math.max(stats.improvementStreak || 0, stats.currentImprovementStreak);
+      } else if (stats.lastRoundScore !== null && roundScore >= stats.lastRoundScore) {
+        stats.currentImprovementStreak = 0;
+      }
+      stats.lastRoundScore = roundScore;
+
       // Check for achievements
       const newAchievements = [];
+      
+      // Perfect Round - score 0
       if (roundScore === 0) {
         stats.perfectRounds++;
-        newAchievements.push('Perfect Round');
+        if (!achievements[score.id]?.includes('Perfect Round')) {
+          newAchievements.push('Perfect Round');
+        }
       }
-      if (stats.currentLowStreak === 3) newAchievements.push('Hot Streak');
-      if (stats.avgScore < 10) newAchievements.push('Consistency King');
+      
+      // Hot Streak - win 3 rounds in a row
+      if (stats.currentLowStreak === 3 && !achievements[score.id]?.includes('Hot Streak')) {
+        newAchievements.push('Hot Streak');
+      }
+      
+      // Ice Cold - win 5 rounds in a row
+      if (stats.currentLowStreak === 5 && !achievements[score.id]?.includes('Ice Cold')) {
+        newAchievements.push('Ice Cold');
+      }
+      
+      // Consistency King - average under 10 (after at least 3 rounds)
+      if (stats.avgScore < 10 && stats.totalRoundsPlayed >= 3 && !achievements[score.id]?.includes('Consistency King')) {
+        newAchievements.push('Consistency King');
+      }
+      
+      // Comeback Kid - won this round after having highest score last round
+      if (previousRound && isLowest) {
+        const prevPlayerScore = previousRound.scores.find(s => s.id === score.id);
+        const prevMaxScore = Math.max(...previousRound.scores.map(s => s.roundScore));
+        if (prevPlayerScore && prevPlayerScore.roundScore === prevMaxScore && !achievements[score.id]?.includes('Comeback Kid')) {
+          newAchievements.push('Comeback Kid');
+        }
+      }
+      
+      // Early Bird - win the first round
+      if (isFirstRound && isLowest && !achievements[score.id]?.includes('Early Bird')) {
+        newAchievements.push('Early Bird');
+      }
+      
+      // Rising Star - improve score 3 times in a row
+      if (stats.currentImprovementStreak >= 3 && !achievements[score.id]?.includes('Rising Star')) {
+        newAchievements.push('Rising Star');
+      }
+      
+      // Speed Demon - 3 perfect rounds in a game
+      if (stats.perfectRounds >= 3 && !achievements[score.id]?.includes('Speed Demon')) {
+        newAchievements.push('Speed Demon');
+      }
+      
+      // Sharpshooter - 5 perfect rounds in a game
+      if (stats.perfectRounds >= 5 && !achievements[score.id]?.includes('Sharpshooter')) {
+        newAchievements.push('Sharpshooter');
+      }
 
       if (newAchievements.length > 0) {
         setAchievements(prev => ({
           ...prev,
-          [score.id]: [...new Set([...prev[score.id], ...newAchievements])]
+          [score.id]: [...new Set([...(prev[score.id] || []), ...newAchievements])]
         }));
       }
     });
 
     setPlayerStats(newStats);
+  };
+
+  // Award end-of-game achievements
+  const awardEndGameAchievements = (sortedPlayers) => {
+    const winner = sortedPlayers[0];
+    const newAchievements = {};
+    
+    sortedPlayers.forEach(player => {
+      const playerAchievements = [];
+      const stats = playerStats[player.id];
+      
+      // Marathon Runner - completed full game
+      if (!achievements[player.id]?.includes('Marathon Runner')) {
+        playerAchievements.push('Marathon Runner');
+      }
+      
+      // Crown Master - winner of the game
+      if (player.id === winner.id && !achievements[player.id]?.includes('Crown Master')) {
+        playerAchievements.push('Crown Master');
+      }
+      
+      // Closer - winner of final round (lowest score in final round)
+      const finalRoundScores = sortedPlayers.map(p => {
+        const lastRound = rounds[rounds.length - 1];
+        return lastRound?.scores.find(s => s.id === p.id)?.roundScore || 0;
+      });
+      const minFinalScore = Math.min(...finalRoundScores);
+      const playerFinalScore = rounds[rounds.length - 1]?.scores.find(s => s.id === player.id)?.roundScore;
+      if (playerFinalScore === minFinalScore && !achievements[player.id]?.includes('Closer')) {
+        playerAchievements.push('Closer');
+      }
+      
+      // Survivor - never had highest score in any round
+      if (!stats?.hadHighestScoreInGame && !achievements[player.id]?.includes('Survivor')) {
+        playerAchievements.push('Survivor');
+      }
+      
+      // Underdog - won after being in last place
+      if (player.id === winner.id && stats?.wasInLastPlace && !achievements[player.id]?.includes('Underdog')) {
+        playerAchievements.push('Underdog');
+      }
+      
+      // Steady Hand - no round score exceeded 20
+      if ((stats?.maxRoundScore || 0) <= 20 && !achievements[player.id]?.includes('Steady Hand')) {
+        playerAchievements.push('Steady Hand');
+      }
+      
+      if (playerAchievements.length > 0) {
+        newAchievements[player.id] = playerAchievements;
+      }
+    });
+    
+    if (Object.keys(newAchievements).length > 0) {
+      setAchievements(prev => {
+        const updated = { ...prev };
+        Object.entries(newAchievements).forEach(([playerId, achList]) => {
+          updated[playerId] = [...new Set([...(updated[playerId] || []), ...achList])];
+        });
+        return updated;
+      });
+    }
   };
 
   // Predict final rankings
@@ -256,6 +486,12 @@ const FiveCrownsScorekeeper = () => {
       // Sort players by total score (lowest wins)
       const sortedPlayers = processedScores.sort((a, b) => a.totalScore - b.totalScore);
       
+      // Update stats one final time before end-game achievements
+      updatePlayerStats(processedScores);
+      
+      // Award end-game achievements
+      awardEndGameAchievements(sortedPlayers);
+      
       // Set the winner and show game over modal
       setCurrentDealer(sortedPlayers[0]);
       setIsGameOverModalVisible(true);
@@ -292,30 +528,68 @@ const FiveCrownsScorekeeper = () => {
         </h2>
         {players.map(player => (
           <div key={player.id} className="bg-white shadow rounded-lg p-4 mb-4">
-            <h3 className="font-bold text-lg mb-2">{player.name}</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p>Average Score: {playerStats[player.id]?.avgScore.toFixed(1)}</p>
-                <p>Best Round: {playerStats[player.id]?.bestRound === Infinity ? '-' : playerStats[player.id]?.bestRound}</p>
-                <p>Worst Round: {playerStats[player.id]?.worstRound === -1 ? '-' : playerStats[player.id]?.worstRound}</p>
+            <h3 className="font-bold text-lg mb-3">{player.name}</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="space-y-1">
+                <p className="flex justify-between">
+                  <span className="text-gray-600">Average Score:</span>
+                  <span className="font-medium">{playerStats[player.id]?.avgScore?.toFixed(1) || '0.0'}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-gray-600">Best Round:</span>
+                  <span className="font-medium text-green-600">{playerStats[player.id]?.bestRound === Infinity ? '-' : playerStats[player.id]?.bestRound}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-gray-600">Worst Round:</span>
+                  <span className="font-medium text-red-600">{playerStats[player.id]?.worstRound === -1 ? '-' : playerStats[player.id]?.worstRound}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-gray-600">Rounds Played:</span>
+                  <span className="font-medium">{playerStats[player.id]?.totalRoundsPlayed || 0}</span>
+                </p>
               </div>
-              <div>
-                <p>Perfect Rounds: {playerStats[player.id]?.perfectRounds}</p>
-                <p>Longest Low Streak: {playerStats[player.id]?.lowStreak}</p>
-                <p>Current Low Streak: {playerStats[player.id]?.currentLowStreak}</p>
+              <div className="space-y-1">
+                <p className="flex justify-between">
+                  <span className="text-gray-600">Perfect Rounds:</span>
+                  <span className="font-medium text-green-600">{playerStats[player.id]?.perfectRounds || 0}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-gray-600">Rounds Won:</span>
+                  <span className="font-medium text-blue-600">{playerStats[player.id]?.roundsWon || 0}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-gray-600">Best Win Streak:</span>
+                  <span className="font-medium">{playerStats[player.id]?.lowStreak || 0}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-gray-600">Current Streak:</span>
+                  <span className="font-medium">{playerStats[player.id]?.currentLowStreak || 0}</span>
+                </p>
               </div>
             </div>
             {achievements[player.id]?.length > 0 && (
-              <div className="mt-2">
-                <p className="font-semibold flex items-center">
-                  <Award className="mr-2" /> Achievements:
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <p className="font-semibold flex items-center text-sm mb-2">
+                  <Award className="mr-2 h-4 w-4" /> Achievements ({achievements[player.id].length})
                 </p>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {achievements[player.id].map(achievement => (
-                    <span key={achievement} className="bg-yellow-100 text-yellow-800 text-sm px-2 py-1 rounded">
-                      {achievement}
-                    </span>
-                  ))}
+                <div className="flex flex-wrap gap-2">
+                  {achievements[player.id].map(achievement => {
+                    const achievementDef = ACHIEVEMENT_DEFINITIONS[achievement] || {
+                      icon: '🏅',
+                      description: achievement,
+                      color: 'bg-gray-100 text-gray-800 border-gray-300'
+                    };
+                    return (
+                      <div
+                        key={achievement}
+                        className={`${achievementDef.color} text-xs px-2 py-1 rounded-full border flex items-center gap-1 cursor-help`}
+                        title={achievementDef.description}
+                      >
+                        <span>{achievementDef.icon}</span>
+                        <span>{achievement}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -323,11 +597,16 @@ const FiveCrownsScorekeeper = () => {
         ))}
         {predictions && (
           <div className="bg-white shadow rounded-lg p-4 mt-4">
-            <h3 className="font-bold text-lg mb-2">Predicted Final Rankings</h3>
+            <h3 className="font-bold text-lg mb-2 flex items-center">
+              <Target className="mr-2 h-5 w-5" /> Predicted Final Rankings
+            </h3>
             {predictions.map((pred, index) => (
               <div key={pred.name} className="flex justify-between items-center py-1">
-                <span>{index + 1}. {pred.name}</span>
-                <span className="text-gray-600">{pred.predictedScore}</span>
+                <span className="flex items-center">
+                  {index === 0 && <Crown className="h-4 w-4 mr-1 text-yellow-500" />}
+                  {index + 1}. {pred.name}
+                </span>
+                <span className="text-gray-600 font-medium">{pred.predictedScore}</span>
               </div>
             ))}
           </div>

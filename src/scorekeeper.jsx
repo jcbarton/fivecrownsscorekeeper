@@ -1,82 +1,82 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertCircle, PlusCircle, Trash2, Trophy, TrendingUp, Award, Star, Flame, Target, Zap, Crown, Medal, Shield, Sparkles } from 'lucide-react';
+import { AlertCircle, PlusCircle, Trash2, Trophy, TrendingUp, Award, Star, Flame, Target, Zap, Crown, Medal, Shield, Sparkles, Users, History, ChevronRight } from 'lucide-react';
 
 // Achievement definitions with icons, descriptions, and unlock conditions
 const ACHIEVEMENT_DEFINITIONS = {
   'Perfect Round': {
     icon: '🎯',
     description: 'Score 0 points in a single round',
-    color: 'bg-green-100 text-green-800 border-green-300'
+    color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
   },
   'Hot Streak': {
     icon: '🔥',
     description: 'Win 3 rounds in a row',
-    color: 'bg-orange-100 text-orange-800 border-orange-300'
+    color: 'bg-orange-500/20 text-orange-300 border-orange-500/30'
   },
   'Consistency King': {
     icon: '👑',
     description: 'Maintain an average score under 10',
-    color: 'bg-purple-100 text-purple-800 border-purple-300'
+    color: 'bg-purple-500/20 text-purple-300 border-purple-500/30'
   },
   'Comeback Kid': {
     icon: '🦸',
     description: 'Win a round after having the highest score in the previous round',
-    color: 'bg-blue-100 text-blue-800 border-blue-300'
+    color: 'bg-blue-500/20 text-blue-300 border-blue-500/30'
   },
   'Early Bird': {
     icon: '🐦',
     description: 'Win the first round of a game',
-    color: 'bg-yellow-100 text-yellow-800 border-yellow-300'
+    color: 'bg-amber-500/20 text-amber-300 border-amber-500/30'
   },
   'Closer': {
     icon: '🏁',
     description: 'Win the final round of a game',
-    color: 'bg-red-100 text-red-800 border-red-300'
+    color: 'bg-rose-500/20 text-rose-300 border-rose-500/30'
   },
   'Sharpshooter': {
     icon: '🎯',
     description: 'Get 5 perfect rounds in a single game',
-    color: 'bg-emerald-100 text-emerald-800 border-emerald-300'
+    color: 'bg-teal-500/20 text-teal-300 border-teal-500/30'
   },
   'Marathon Runner': {
     icon: '🏃',
     description: 'Complete a full 11-round game',
-    color: 'bg-indigo-100 text-indigo-800 border-indigo-300'
+    color: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
   },
   'Ice Cold': {
     icon: '🧊',
     description: 'Score the lowest in 5 consecutive rounds',
-    color: 'bg-cyan-100 text-cyan-800 border-cyan-300'
+    color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
   },
   'Survivor': {
     icon: '🛡️',
     description: 'Complete a game without ever having the highest score in a round',
-    color: 'bg-gray-100 text-gray-800 border-gray-300'
+    color: 'bg-slate-500/20 text-slate-300 border-slate-500/30'
   },
   'Rising Star': {
     icon: '⭐',
     description: 'Improve your round score 3 times in a row',
-    color: 'bg-amber-100 text-amber-800 border-amber-300'
+    color: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
   },
   'Crown Master': {
     icon: '🏆',
     description: 'Win a complete game of Five Crowns',
-    color: 'bg-yellow-200 text-yellow-900 border-yellow-400'
+    color: 'bg-gradient-to-r from-amber-500/30 to-yellow-500/30 text-amber-200 border-amber-400/40'
   },
   'Underdog': {
     icon: '🐕',
     description: 'Win after being in last place at some point',
-    color: 'bg-rose-100 text-rose-800 border-rose-300'
+    color: 'bg-pink-500/20 text-pink-300 border-pink-500/30'
   },
   'Steady Hand': {
     icon: '✋',
     description: 'Have no round score exceed 20 in a complete game',
-    color: 'bg-teal-100 text-teal-800 border-teal-300'
+    color: 'bg-green-500/20 text-green-300 border-green-500/30'
   },
   'Speed Demon': {
     icon: '⚡',
     description: 'Get 3 perfect rounds in a single game',
-    color: 'bg-violet-100 text-violet-800 border-violet-300'
+    color: 'bg-violet-500/20 text-violet-300 border-violet-500/30'
   }
 };
 
@@ -522,67 +522,73 @@ const FiveCrownsScorekeeper = () => {
     const predictions = predictFinalRankings();
 
     return (
-      <div className="mt-6">
-        <h2 className="text-xl font-bold mb-4 flex items-center">
-          <TrendingUp className="mr-2" /> Statistics
+      <div className="mt-8 animate-slide-up" style={{animationDelay: '0.2s'}}>
+        <h2 className="text-xl font-bold mb-4 flex items-center text-white/90">
+          <TrendingUp className="mr-3 h-5 w-5 text-primary-400" /> 
+          <span>Statistics</span>
         </h2>
-        {players.map(player => (
-          <div key={player.id} className="bg-white shadow rounded-lg p-4 mb-4">
-            <h3 className="font-bold text-lg mb-3">{player.name}</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="space-y-1">
-                <p className="flex justify-between">
-                  <span className="text-gray-600">Average Score:</span>
-                  <span className="font-medium">{playerStats[player.id]?.avgScore?.toFixed(1) || '0.0'}</span>
-                </p>
-                <p className="flex justify-between">
-                  <span className="text-gray-600">Best Round:</span>
-                  <span className="font-medium text-green-600">{playerStats[player.id]?.bestRound === Infinity ? '-' : playerStats[player.id]?.bestRound}</span>
-                </p>
-                <p className="flex justify-between">
-                  <span className="text-gray-600">Worst Round:</span>
-                  <span className="font-medium text-red-600">{playerStats[player.id]?.worstRound === -1 ? '-' : playerStats[player.id]?.worstRound}</span>
-                </p>
-                <p className="flex justify-between">
-                  <span className="text-gray-600">Rounds Played:</span>
-                  <span className="font-medium">{playerStats[player.id]?.totalRoundsPlayed || 0}</span>
-                </p>
+        {players.map((player, idx) => (
+          <div key={player.id} className="score-card mb-4 animate-slide-up" style={{animationDelay: `${0.1 * idx}s`}}>
+            <h3 className="font-bold text-lg mb-4 text-white flex items-center">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-sm mr-3">
+                {player.name.charAt(0).toUpperCase()}
               </div>
-              <div className="space-y-1">
-                <p className="flex justify-between">
-                  <span className="text-gray-600">Perfect Rounds:</span>
-                  <span className="font-medium text-green-600">{playerStats[player.id]?.perfectRounds || 0}</span>
-                </p>
-                <p className="flex justify-between">
-                  <span className="text-gray-600">Rounds Won:</span>
-                  <span className="font-medium text-blue-600">{playerStats[player.id]?.roundsWon || 0}</span>
-                </p>
-                <p className="flex justify-between">
-                  <span className="text-gray-600">Best Win Streak:</span>
-                  <span className="font-medium">{playerStats[player.id]?.lowStreak || 0}</span>
-                </p>
-                <p className="flex justify-between">
-                  <span className="text-gray-600">Current Streak:</span>
-                  <span className="font-medium">{playerStats[player.id]?.currentLowStreak || 0}</span>
-                </p>
+              {player.name}
+            </h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-2 rounded-lg bg-white/5">
+                  <span className="text-white/60">Average Score</span>
+                  <span className="font-semibold text-white">{playerStats[player.id]?.avgScore?.toFixed(1) || '0.0'}</span>
+                </div>
+                <div className="flex justify-between items-center p-2 rounded-lg bg-white/5">
+                  <span className="text-white/60">Best Round</span>
+                  <span className="font-semibold text-emerald-400">{playerStats[player.id]?.bestRound === Infinity ? '-' : playerStats[player.id]?.bestRound}</span>
+                </div>
+                <div className="flex justify-between items-center p-2 rounded-lg bg-white/5">
+                  <span className="text-white/60">Worst Round</span>
+                  <span className="font-semibold text-rose-400">{playerStats[player.id]?.worstRound === -1 ? '-' : playerStats[player.id]?.worstRound}</span>
+                </div>
+                <div className="flex justify-between items-center p-2 rounded-lg bg-white/5">
+                  <span className="text-white/60">Rounds Played</span>
+                  <span className="font-semibold text-white">{playerStats[player.id]?.totalRoundsPlayed || 0}</span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-2 rounded-lg bg-white/5">
+                  <span className="text-white/60">Perfect Rounds</span>
+                  <span className="font-semibold text-emerald-400">{playerStats[player.id]?.perfectRounds || 0}</span>
+                </div>
+                <div className="flex justify-between items-center p-2 rounded-lg bg-white/5">
+                  <span className="text-white/60">Rounds Won</span>
+                  <span className="font-semibold text-primary-400">{playerStats[player.id]?.roundsWon || 0}</span>
+                </div>
+                <div className="flex justify-between items-center p-2 rounded-lg bg-white/5">
+                  <span className="text-white/60">Best Win Streak</span>
+                  <span className="font-semibold text-white">{playerStats[player.id]?.lowStreak || 0}</span>
+                </div>
+                <div className="flex justify-between items-center p-2 rounded-lg bg-white/5">
+                  <span className="text-white/60">Current Streak</span>
+                  <span className="font-semibold text-white">{playerStats[player.id]?.currentLowStreak || 0}</span>
+                </div>
               </div>
             </div>
             {achievements[player.id]?.length > 0 && (
-              <div className="mt-4 pt-3 border-t border-gray-100">
-                <p className="font-semibold flex items-center text-sm mb-2">
-                  <Award className="mr-2 h-4 w-4" /> Achievements ({achievements[player.id].length})
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <p className="font-semibold flex items-center text-sm mb-3 text-white/80">
+                  <Award className="mr-2 h-4 w-4 text-amber-400" /> Achievements ({achievements[player.id].length})
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {achievements[player.id].map(achievement => {
                     const achievementDef = ACHIEVEMENT_DEFINITIONS[achievement] || {
                       icon: '🏅',
                       description: achievement,
-                      color: 'bg-gray-100 text-gray-800 border-gray-300'
+                      color: 'bg-slate-500/20 text-slate-300 border-slate-500/30'
                     };
                     return (
                       <div
                         key={achievement}
-                        className={`${achievementDef.color} text-xs px-2 py-1 rounded-full border flex items-center gap-1 cursor-help`}
+                        className={`achievement-badge ${achievementDef.color}`}
                         title={achievementDef.description}
                       >
                         <span>{achievementDef.icon}</span>
@@ -596,19 +602,24 @@ const FiveCrownsScorekeeper = () => {
           </div>
         ))}
         {predictions && (
-          <div className="bg-white shadow rounded-lg p-4 mt-4">
-            <h3 className="font-bold text-lg mb-2 flex items-center">
-              <Target className="mr-2 h-5 w-5" /> Predicted Final Rankings
+          <div className="score-card mt-4">
+            <h3 className="font-bold text-lg mb-4 flex items-center text-white">
+              <Target className="mr-3 h-5 w-5 text-accent-400" /> Predicted Final Rankings
             </h3>
-            {predictions.map((pred, index) => (
-              <div key={pred.name} className="flex justify-between items-center py-1">
-                <span className="flex items-center">
-                  {index === 0 && <Crown className="h-4 w-4 mr-1 text-yellow-500" />}
-                  {index + 1}. {pred.name}
-                </span>
-                <span className="text-gray-600 font-medium">{pred.predictedScore}</span>
-              </div>
-            ))}
+            <div className="space-y-2">
+              {predictions.map((pred, index) => (
+                <div key={pred.name} className="flex justify-between items-center p-3 rounded-xl bg-white/5 transition-all duration-300 hover:bg-white/10">
+                  <span className="flex items-center text-white">
+                    {index === 0 && <Crown className="h-5 w-5 mr-2 text-amber-400" />}
+                    {index === 1 && <Medal className="h-5 w-5 mr-2 text-slate-400" />}
+                    {index === 2 && <Medal className="h-5 w-5 mr-2 text-amber-600" />}
+                    {index > 2 && <span className="w-5 h-5 mr-2 text-center text-white/40">{index + 1}</span>}
+                    {pred.name}
+                  </span>
+                  <span className="text-white/70 font-medium">{pred.predictedScore}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -616,50 +627,94 @@ const FiveCrownsScorekeeper = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-2xl">
-      <h1 className="text-3xl font-bold text-center mb-6">Five Crowns</h1>
+    <div className="container mx-auto px-4 py-6 max-w-lg safe-top safe-bottom">
+      {/* Header */}
+      <div className="text-center mb-8 animate-slide-up">
+        <div className="inline-flex items-center justify-center mb-3">
+          <Crown className="h-10 w-10 text-amber-400 mr-3" />
+          <h1 className="text-4xl font-bold text-gradient">Five Crowns</h1>
+        </div>
+        <p className="text-white/50 text-sm">Score Keeper</p>
+      </div>
       
-      {/* Game Info */}
-      <div className="bg-white shadow rounded-lg p-4 mb-6 flex justify-between items-center">
-        <div>
-          <p className="font-semibold">Wild Card: <span className="text-green-600">{currentWildCard}</span></p>
-          <p className="font-semibold">Dealer: <span className="text-purple-600">{currentDealer?.name || 'Not Set'}</span></p>
+      {/* Game Info Card */}
+      <div className="glass-card p-5 mb-6 animate-slide-up" style={{animationDelay: '0.1s'}}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="text-center">
+              <p className="text-white/50 text-xs uppercase tracking-wider mb-1">Wild Card</p>
+              <div className="wild-badge">
+                {currentWildCard}
+              </div>
+            </div>
+            <div className="h-12 w-px bg-white/10"></div>
+            <div>
+              <p className="text-white/50 text-xs uppercase tracking-wider mb-1">Dealer</p>
+              <p className="text-white font-semibold text-lg">{currentDealer?.name || 'Not Set'}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-white/50 text-xs uppercase tracking-wider mb-1">Round</p>
+            <p className="text-white font-bold text-2xl">{currentRound}<span className="text-white/30 text-lg">/11</span></p>
+          </div>
         </div>
       </div>
 
       {/* Players Section */}
-      <div className="mb-6">
+      <div className="mb-6 animate-slide-up" style={{animationDelay: '0.15s'}}>
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Current Scores</h2>
+          <h2 className="text-xl font-bold text-white flex items-center">
+            <Users className="mr-2 h-5 w-5 text-primary-400" />
+            Current Scores
+          </h2>
           <button 
             onClick={() => setIsAddPlayerModalVisible(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center"
+            className="btn-gradient flex items-center text-sm py-2 px-4"
           >
-            <PlusCircle className="mr-2" /> Add Player
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Player
           </button>
         </div>
 
         {players.length === 0 ? (
-          <p className="text-gray-500 text-center">No players added yet</p>
+          <div className="glass-card p-8 text-center">
+            <Users className="h-12 w-12 text-white/20 mx-auto mb-3" />
+            <p className="text-white/50">No players added yet</p>
+            <p className="text-white/30 text-sm mt-1">Add players to start the game</p>
+          </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {[...players]
-              .sort((a, b) => b.totalScore - a.totalScore)
-              .map(player => (
+              .sort((a, b) => a.totalScore - b.totalScore)
+              .map((player, index) => (
               <div 
                 key={player.id} 
-                className="bg-white shadow rounded-lg p-4 flex justify-between items-center"
+                className={`score-card flex justify-between items-center ${index === 0 ? 'ring-2 ring-amber-500/30' : ''}`}
               >
-                <div>
-                  <span className="font-semibold">{player.name}</span>
-                  <span className="ml-4 text-blue-600 font-bold">Total: {player.totalScore}</span>
+                <div className="flex items-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3 ${
+                    index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'bg-white/10 text-white/60'
+                  }`}>
+                    {index + 1}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white">{player.name}</span>
+                    {index === 0 && players.length > 1 && (
+                      <span className="ml-2 text-xs text-amber-400">Leading</span>
+                    )}
+                  </div>
                 </div>
-                <button 
-                  onClick={() => removePlayer(player.id)}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <Trash2 />
-                </button>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <span className="text-2xl font-bold text-white">{player.totalScore}</span>
+                    <span className="text-white/40 text-sm ml-1">pts</span>
+                  </div>
+                  <button 
+                    onClick={() => removePlayer(player.id)}
+                    className="p-2 rounded-lg text-white/30 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-200"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -670,9 +725,12 @@ const FiveCrownsScorekeeper = () => {
       {players.length > 1 && (
         <button 
           onClick={beginRoundScoring}
-          className="w-full bg-green-500 text-white py-3 rounded hover:bg-green-600 flex items-center justify-center"
+          className="w-full btn-gradient py-4 text-lg flex items-center justify-center gap-2 mb-6 animate-slide-up"
+          style={{animationDelay: '0.2s'}}
         >
+          <Sparkles className="h-5 w-5" />
           Enter scores for wild card {currentWildCard}
+          <ChevronRight className="h-5 w-5" />
         </button>
       )}
 
@@ -680,28 +738,48 @@ const FiveCrownsScorekeeper = () => {
       {renderStatistics()}
 
       {/* Round History */}
-      <div className="mt-6">
-        <h2 className="text-xl font-bold mb-4">Round History</h2>
+      <div className="mt-8 animate-slide-up" style={{animationDelay: '0.25s'}}>
+        <h2 className="text-xl font-bold mb-4 text-white flex items-center">
+          <History className="mr-2 h-5 w-5 text-primary-400" />
+          Round History
+        </h2>
         {rounds.length === 0 ? (
-          <p className="text-gray-500 text-center">No rounds played yet</p>
+          <div className="glass-card p-8 text-center">
+            <History className="h-12 w-12 text-white/20 mx-auto mb-3" />
+            <p className="text-white/50">No rounds played yet</p>
+            <p className="text-white/30 text-sm mt-1">Complete a round to see history</p>
+          </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {rounds.slice().reverse().map((round, index) => (
               <div 
                 key={round.roundNumber} 
-                className="bg-white shadow rounded-lg p-4"
+                className="score-card"
               >
-                <div className="font-semibold mb-2">
-                  Wild: {round.wildCard}, Dealer: {round.dealer}
+                <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div className="wild-badge w-10 h-10 text-base">
+                      {round.wildCard}
+                    </div>
+                    <div>
+                      <p className="text-white font-medium">Round {round.roundNumber}</p>
+                      <p className="text-white/40 text-xs">Dealer: {round.dealer}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  {round.scores.map(score => (
+                <div className="space-y-2">
+                  {round.scores
+                    .slice()
+                    .sort((a, b) => a.roundScore - b.roundScore)
+                    .map((score, scoreIndex) => (
                     <div 
                       key={score.id} 
-                      className="flex justify-between"
+                      className={`flex justify-between items-center p-2 rounded-lg ${scoreIndex === 0 ? 'bg-emerald-500/10' : 'bg-white/5'}`}
                     >
-                      <span>{score.name}</span>
-                      <span className="text-blue-600">{score.roundScore}</span>
+                      <span className={`${scoreIndex === 0 ? 'text-emerald-400' : 'text-white/80'}`}>{score.name}</span>
+                      <span className={`font-semibold ${scoreIndex === 0 ? 'text-emerald-400' : 'text-white'}`}>
+                        {score.roundScore === 0 ? '🎯 0' : score.roundScore}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -713,26 +791,31 @@ const FiveCrownsScorekeeper = () => {
 
       {/* Add Player Modal */}
       {isAddPlayerModalVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-xl w-96">
-            <h2 className="text-xl font-bold mb-4">Add New Player</h2>
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+              <PlusCircle className="mr-3 h-6 w-6 text-primary-400" />
+              Add New Player
+            </h2>
             <input
               type="text"
-              placeholder="Player Name"
+              placeholder="Enter player name"
               value={newPlayerName}
               onChange={(e) => setNewPlayerName(e.target.value)}
-              className="w-full p-2 border rounded mb-4"
+              onKeyPress={(e) => e.key === 'Enter' && addPlayer()}
+              className="input-modern mb-6"
+              autoFocus
             />
-            <div className="flex justify-between">
+            <div className="flex gap-3">
               <button 
                 onClick={addPlayer}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                className="flex-1 btn-gradient"
               >
-                Add
+                Add Player
               </button>
               <button 
                 onClick={() => setIsAddPlayerModalVisible(false)}
-                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                className="flex-1 btn-secondary"
               >
                 Cancel
               </button>
@@ -743,34 +826,44 @@ const FiveCrownsScorekeeper = () => {
 
       {/* Enter Scores Modal */}
       {isEnterScoresModalVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-xl w-96 max-h-[80vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Enter scores for wild card {currentWildCard}</h2>
-            {players.map(player => (
-              <div 
-                key={player.id} 
-                className="flex justify-between items-center mb-4"
-              >
-                <span className="font-semibold">{player.name}</span>
-                <input
-                  type="number"
-                  placeholder="Score"
-                  value={currentRoundScores[player.id]}
-                  onChange={(e) => updatePlayerScore(player.id, e.target.value)}
-                  className="w-24 p-2 border rounded text-right"
-                />
+        <div className="modal-overlay">
+          <div className="modal-content max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white flex items-center">
+                <Sparkles className="mr-3 h-6 w-6 text-amber-400" />
+                Round Scores
+              </h2>
+              <div className="wild-badge">
+                {currentWildCard}
               </div>
-            ))}
-            <div className="flex justify-between mt-6">
+            </div>
+            <div className="space-y-4 mb-6">
+              {players.map(player => (
+                <div 
+                  key={player.id} 
+                  className="flex justify-between items-center p-4 rounded-xl bg-white/5"
+                >
+                  <span className="font-semibold text-white">{player.name}</span>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={currentRoundScores[player.id]}
+                    onChange={(e) => updatePlayerScore(player.id, e.target.value)}
+                    className="w-24 bg-white/10 border border-white/20 text-white text-right px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
               <button 
                 onClick={finishRound}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                className="flex-1 btn-gradient"
               >
                 Finish Round
               </button>
               <button 
                 onClick={() => setIsEnterScoresModalVisible(false)}
-                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                className="flex-1 btn-secondary"
               >
                 Cancel
               </button>
@@ -781,41 +874,56 @@ const FiveCrownsScorekeeper = () => {
 
       {/* Game Over Modal */}
       {isGameOverModalVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-8 rounded-lg shadow-xl w-96 text-center">
-            <Trophy className="mx-auto text-yellow-500 mb-4" size={64} />
-            <h2 className="text-2xl font-bold mb-4">Game Over!</h2>
+        <div className="modal-overlay">
+          <div className="modal-content text-center max-w-sm">
             <div className="mb-6">
-              <p className="text-xl font-semibold">Winner: {currentDealer.name}</p>
-              <p className="text-gray-600">Lowest Total Score: {currentDealer.totalScore}</p>
+              <div className="relative inline-block">
+                <div className="absolute inset-0 bg-amber-500/30 blur-2xl rounded-full"></div>
+                <Trophy className="relative h-20 w-20 text-amber-400 mx-auto animate-pulse-slow" />
+              </div>
             </div>
-            <h3 className="text-xl font-bold mb-4">Final Scores</h3>
-            <div className="space-y-2">
-              {players
-                .sort((a, b) => a.totalScore - b.totalScore)
-                .map((player, index) => (
-                  <div 
-                    key={player.id} 
-                    className={`flex justify-between p-2 rounded ${
-                      index === 0 
-                        ? 'bg-green-100 font-bold' 
-                        : 'bg-gray-100'
-                    }`}
-                  >
-                    <span>{player.name}</span>
-                    <span>{player.totalScore}</span>
-                  </div>
-                ))
-              }
+            <h2 className="text-3xl font-bold text-white mb-2">Game Over!</h2>
+            <div className="mb-6">
+              <p className="text-amber-400 text-xl font-semibold">{currentDealer.name}</p>
+              <p className="text-white/50">Winner with {currentDealer.totalScore} points</p>
             </div>
-            <div className="flex justify-center mt-6">
-              <button 
-                onClick={resetGame}
-                className="bg-blue-500 text-white px-6 py-3 rounded hover:bg-blue-600 flex items-center"
-              >
-                New Game
-              </button>
+            
+            <div className="bg-white/5 rounded-2xl p-4 mb-6">
+              <h3 className="text-lg font-bold text-white/80 mb-3">Final Rankings</h3>
+              <div className="space-y-2">
+                {players
+                  .sort((a, b) => a.totalScore - b.totalScore)
+                  .map((player, index) => (
+                    <div 
+                      key={player.id} 
+                      className={`flex justify-between items-center p-3 rounded-xl ${
+                        index === 0 
+                          ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/30' 
+                          : 'bg-white/5'
+                      }`}
+                    >
+                      <span className="flex items-center text-white">
+                        {index === 0 && <Crown className="h-5 w-5 mr-2 text-amber-400" />}
+                        {index === 1 && <Medal className="h-5 w-5 mr-2 text-slate-400" />}
+                        {index === 2 && <Medal className="h-5 w-5 mr-2 text-amber-600" />}
+                        {index > 2 && <span className="w-5 h-5 mr-2 text-center text-white/40">{index + 1}</span>}
+                        {player.name}
+                      </span>
+                      <span className={`font-bold ${index === 0 ? 'text-amber-400' : 'text-white/70'}`}>
+                        {player.totalScore}
+                      </span>
+                    </div>
+                  ))
+                }
+              </div>
             </div>
+            <button 
+              onClick={resetGame}
+              className="w-full btn-gradient py-4 text-lg flex items-center justify-center"
+            >
+              <Sparkles className="mr-2 h-5 w-5" />
+              New Game
+            </button>
           </div>
         </div>
       )}

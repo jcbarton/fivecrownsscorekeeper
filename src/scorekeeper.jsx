@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertCircle, PlusCircle, Trash2, Trophy, TrendingUp, Award, Star, Flame, Target, Zap, Crown, Medal, Shield, Sparkles, Users, History, ChevronRight } from 'lucide-react';
+import { AlertCircle, PlusCircle, Trash2, Trophy, TrendingUp, Award, Star, Flame, Target, Zap, Crown, Medal, Shield, Sparkles, Users, History, ChevronRight, RotateCcw } from 'lucide-react';
 
 // Achievement definitions with icons, descriptions, and unlock conditions
 const ACHIEVEMENT_DEFINITIONS = {
@@ -788,6 +788,19 @@ const FiveCrownsScorekeeper = () => {
           </div>
         )}
       </div>
+
+      {/* Clear Game Button - Always visible when there's game data */}
+      {(players.length > 0 || rounds.length > 0) && (
+        <div className="mt-8 animate-slide-up" style={{animationDelay: '0.3s'}}>
+          <button 
+            onClick={resetGame}
+            className="w-full btn-secondary py-4 text-lg flex items-center justify-center gap-2 border border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-400 transition-all duration-200"
+          >
+            <RotateCcw className="h-5 w-5" />
+            Clear Game
+          </button>
+        </div>
+      )}
 
       {/* Add Player Modal */}
       {isAddPlayerModalVisible && (

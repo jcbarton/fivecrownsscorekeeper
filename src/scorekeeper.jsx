@@ -105,6 +105,26 @@ const FiveCrownsScorekeeper = () => {
   // Possible wild cards for Five Crowns
   const WILD_CARDS = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
+  // Helper function to create initial player stats
+  const createInitialPlayerStats = () => ({
+    avgScore: 0,
+    bestRound: Infinity,
+    worstRound: -1,
+    lowStreak: 0,
+    highStreak: 0,
+    currentLowStreak: 0,
+    currentHighStreak: 0,
+    perfectRounds: 0,
+    totalRoundsPlayed: 0,
+    roundsWon: 0,
+    improvementStreak: 0,
+    currentImprovementStreak: 0,
+    lastRoundScore: null,
+    hadHighestScoreInGame: false,
+    wasInLastPlace: false,
+    maxRoundScore: 0
+  });
+
   // Track if component has been initialized to avoid saving empty state on first render
   const isInitialized = useRef(false);
 
@@ -177,24 +197,7 @@ const FiveCrownsScorekeeper = () => {
       // Initialize stats for new player
       setPlayerStats(prev => ({
         ...prev,
-        [newPlayer.id]: {
-          avgScore: 0,
-          bestRound: Infinity,
-          worstRound: -1,
-          lowStreak: 0,
-          highStreak: 0,
-          currentLowStreak: 0,
-          currentHighStreak: 0,
-          perfectRounds: 0,
-          totalRoundsPlayed: 0,
-          roundsWon: 0,
-          improvementStreak: 0,
-          currentImprovementStreak: 0,
-          lastRoundScore: null,
-          hadHighestScoreInGame: false,
-          wasInLastPlace: false,
-          maxRoundScore: 0
-        }
+        [newPlayer.id]: createInitialPlayerStats()
       }));
 
       setAchievements(prev => ({
@@ -552,25 +555,8 @@ const FiveCrownsScorekeeper = () => {
     const newAchievements = {};
     
     players.forEach(player => {
-      newStats[player.id] = {
-        avgScore: 0,
-        bestRound: Infinity,
-        worstRound: -1,
-        lowStreak: 0,
-        highStreak: 0,
-        currentLowStreak: 0,
-        currentHighStreak: 0,
-        perfectRounds: 0,
-        totalRoundsPlayed: 0,
-        roundsWon: 0,
-        improvementStreak: 0,
-        currentImprovementStreak: 0,
-        lastRoundScore: null,
-        hadHighestScoreInGame: false,
-        wasInLastPlace: false,
-        maxRoundScore: 0
-      };
-      newAchievements[player.id] = [];
+      newStats[player.id] = createInitialPlayerStats();
+      newAchievements[player.id] = new Set();
     });
     
     // Recalculate stats for each round
@@ -587,12 +573,12 @@ const FiveCrownsScorekeeper = () => {
         
         stats.totalRoundsPlayed = (stats.totalRoundsPlayed || 0) + 1;
         
-        const playerRounds = updatedRounds.slice(0, index + 1).filter(r => 
-          r.scores.find(s => s.id === score.id)
-        );
-        const sumOfScores = playerRounds.reduce((sum, r) => 
-          sum + r.scores.find(s => s.id === score.id).roundScore, 0
-        );
+        // Calculate average score by iterating through completed rounds
+        const playerRounds = updatedRounds.slice(0, index + 1);
+        const sumOfScores = playerRounds.reduce((sum, r) => {
+          const playerScore = r.scores.find(s => s.id === score.id);
+          return sum + (playerScore ? playerScore.roundScore : 0);
+        }, 0);
         stats.avgScore = playerRounds.length > 0 ? sumOfScores / playerRounds.length : 0;
         
         if (isNaN(stats.avgScore)) {
@@ -633,54 +619,62 @@ const FiveCrownsScorekeeper = () => {
         }
         stats.lastRoundScore = roundScore;
         
-        // Check for achievements
+        // Check for achievements (using Set for O(1) lookups)
+        const playerAchievements = newAchievements[score.id];
+        
         if (roundScore === 0) {
           stats.perfectRounds++;
-          if (!newAchievements[score.id]?.includes('Perfect Round')) {
-            newAchievements[score.id].push('Perfect Round');
+          if (!playerAchievements.has('Perfect Round')) {
+            playerAchievements.add('Perfect Round');
           }
         }
         
-        if (stats.currentLowStreak === 3 && !newAchievements[score.id]?.includes('Hot Streak')) {
-          newAchievements[score.id].push('Hot Streak');
+        if (stats.currentLowStreak === 3 && !playerAchievements.has('Hot Streak')) {
+          playerAchievements.add('Hot Streak');
         }
         
-        if (stats.currentLowStreak === 5 && !newAchievements[score.id]?.includes('Ice Cold')) {
-          newAchievements[score.id].push('Ice Cold');
+        if (stats.currentLowStreak === 5 && !playerAchievements.has('Ice Cold')) {
+          playerAchievements.add('Ice Cold');
         }
         
-        if (stats.avgScore < 10 && stats.totalRoundsPlayed >= 3 && !newAchievements[score.id]?.includes('Consistency King')) {
-          newAchievements[score.id].push('Consistency King');
+        if (stats.avgScore < 10 && stats.totalRoundsPlayed >= 3 && !playerAchievements.has('Consistency King')) {
+          playerAchievements.add('Consistency King');
         }
         
         if (previousRound && isLowest) {
           const prevPlayerScore = previousRound.scores.find(s => s.id === score.id);
           const prevMaxScore = Math.max(...previousRound.scores.map(s => s.roundScore));
-          if (prevPlayerScore && prevPlayerScore.roundScore === prevMaxScore && !newAchievements[score.id]?.includes('Comeback Kid')) {
-            newAchievements[score.id].push('Comeback Kid');
+          if (prevPlayerScore && prevPlayerScore.roundScore === prevMaxScore && !playerAchievements.has('Comeback Kid')) {
+            playerAchievements.add('Comeback Kid');
           }
         }
         
-        if (isFirstRound && isLowest && !newAchievements[score.id]?.includes('Early Bird')) {
-          newAchievements[score.id].push('Early Bird');
+        if (isFirstRound && isLowest && !playerAchievements.has('Early Bird')) {
+          playerAchievements.add('Early Bird');
         }
         
-        if (stats.currentImprovementStreak >= 3 && !newAchievements[score.id]?.includes('Rising Star')) {
-          newAchievements[score.id].push('Rising Star');
+        if (stats.currentImprovementStreak >= 3 && !playerAchievements.has('Rising Star')) {
+          playerAchievements.add('Rising Star');
         }
         
-        if (stats.perfectRounds >= 3 && !newAchievements[score.id]?.includes('Speed Demon')) {
-          newAchievements[score.id].push('Speed Demon');
+        if (stats.perfectRounds >= 3 && !playerAchievements.has('Speed Demon')) {
+          playerAchievements.add('Speed Demon');
         }
         
-        if (stats.perfectRounds >= 5 && !newAchievements[score.id]?.includes('Sharpshooter')) {
-          newAchievements[score.id].push('Sharpshooter');
+        if (stats.perfectRounds >= 5 && !playerAchievements.has('Sharpshooter')) {
+          playerAchievements.add('Sharpshooter');
         }
       });
     });
     
+    // Convert Sets back to arrays for achievements state
+    const achievementsArray = {};
+    Object.keys(newAchievements).forEach(playerId => {
+      achievementsArray[playerId] = Array.from(newAchievements[playerId]);
+    });
+    
     setPlayerStats(newStats);
-    setAchievements(newAchievements);
+    setAchievements(achievementsArray);
     setPlayers(resetPlayers);
   };
 
@@ -962,7 +956,7 @@ const FiveCrownsScorekeeper = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => beginEditRound(rounds.length - 1 - index)}
+                    onClick={() => beginEditRound(rounds.length - 1 - index)} // Convert from reversed display order to actual round index
                     className="p-2 rounded-lg text-white/40 hover:text-primary-400 hover:bg-primary-500/10 transition-all duration-200"
                     title="Edit scores"
                   >

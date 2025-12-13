@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertCircle, PlusCircle, Trash2, Trophy, TrendingUp, Award, Star, Flame, Target, Zap, Crown, Medal, Shield, Sparkles, Users, History, ChevronRight, RotateCcw } from 'lucide-react';
+import { AlertCircle, PlusCircle, Trash2, Trophy, TrendingUp, Award, Star, Flame, Target, Zap, Crown, Medal, Shield, Sparkles, Users, History, ChevronRight, RotateCcw, Edit } from 'lucide-react';
 
 // Achievement definitions with icons, descriptions, and unlock conditions
 const ACHIEVEMENT_DEFINITIONS = {
@@ -105,6 +105,26 @@ const FiveCrownsScorekeeper = () => {
   // Possible wild cards for Five Crowns
   const WILD_CARDS = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
+  // Helper function to create initial player stats
+  const createInitialPlayerStats = () => ({
+    avgScore: 0,
+    bestRound: Infinity,
+    worstRound: -1,
+    lowStreak: 0,
+    highStreak: 0,
+    currentLowStreak: 0,
+    currentHighStreak: 0,
+    perfectRounds: 0,
+    totalRoundsPlayed: 0,
+    roundsWon: 0,
+    improvementStreak: 0,
+    currentImprovementStreak: 0,
+    lastRoundScore: null,
+    hadHighestScoreInGame: false,
+    wasInLastPlace: false,
+    maxRoundScore: 0
+  });
+
   // Track if component has been initialized to avoid saving empty state on first render
   const isInitialized = useRef(false);
 
@@ -122,9 +142,11 @@ const FiveCrownsScorekeeper = () => {
   const [isAddPlayerModalVisible, setIsAddPlayerModalVisible] = useState(false);
   const [isEnterScoresModalVisible, setIsEnterScoresModalVisible] = useState(false);
   const [isGameOverModalVisible, setIsGameOverModalVisible] = useState(false);
+  const [isEditScoresModalVisible, setIsEditScoresModalVisible] = useState(false);
   
   // Temporary scores for current round
   const [currentRoundScores, setCurrentRoundScores] = useState({});
+  const [editingRoundIndex, setEditingRoundIndex] = useState(null);
 
   // New state for statistics
   const [playerStats, setPlayerStats] = useState(() => getInitialState()?.playerStats || {});
@@ -175,24 +197,7 @@ const FiveCrownsScorekeeper = () => {
       // Initialize stats for new player
       setPlayerStats(prev => ({
         ...prev,
-        [newPlayer.id]: {
-          avgScore: 0,
-          bestRound: Infinity,
-          worstRound: -1,
-          lowStreak: 0,
-          highStreak: 0,
-          currentLowStreak: 0,
-          currentHighStreak: 0,
-          perfectRounds: 0,
-          totalRoundsPlayed: 0,
-          roundsWon: 0,
-          improvementStreak: 0,
-          currentImprovementStreak: 0,
-          lastRoundScore: null,
-          hadHighestScoreInGame: false,
-          wasInLastPlace: false,
-          maxRoundScore: 0
-        }
+        [newPlayer.id]: createInitialPlayerStats()
       }));
 
       setAchievements(prev => ({
@@ -515,6 +520,190 @@ const FiveCrownsScorekeeper = () => {
     updatePlayerStats(processedScores);
   };
 
+  // Start editing an existing round
+  const beginEditRound = (roundIndex) => {
+    const round = rounds[roundIndex];
+    // Initialize scores with current round scores
+    const initialScores = round.scores.reduce((acc, score) => {
+      acc[score.id] = score.roundScore.toString();
+      return acc;
+    }, {});
+    setCurrentRoundScores(initialScores);
+    setEditingRoundIndex(roundIndex);
+    setIsEditScoresModalVisible(true);
+  };
+
+  // Recalculate all totals and stats from scratch
+  const recalculateGameState = (updatedRounds) => {
+    // Reset player totals
+    const resetPlayers = players.map(p => ({ ...p, totalScore: 0 }));
+    
+    // Recalculate totals progressively through each round
+    updatedRounds.forEach(round => {
+      round.scores.forEach(score => {
+        const player = resetPlayers.find(p => p.id === score.id);
+        if (player) {
+          player.totalScore += score.roundScore;
+          // Update the score object's totalScore as well
+          score.totalScore = player.totalScore;
+        }
+      });
+    });
+    
+    // Reset stats and achievements
+    const newStats = {};
+    const newAchievements = {};
+    
+    players.forEach(player => {
+      newStats[player.id] = createInitialPlayerStats();
+      newAchievements[player.id] = new Set();
+    });
+    
+    // Recalculate stats for each round
+    updatedRounds.forEach((round, index) => {
+      const roundScores = round.scores;
+      const minRoundScore = Math.min(...roundScores.map(s => s.roundScore));
+      const maxRoundScore = Math.max(...roundScores.map(s => s.roundScore));
+      const isFirstRound = index === 0;
+      const previousRound = index > 0 ? updatedRounds[index - 1] : null;
+      
+      roundScores.forEach(score => {
+        const stats = newStats[score.id];
+        const roundScore = score.roundScore;
+        
+        stats.totalRoundsPlayed = (stats.totalRoundsPlayed || 0) + 1;
+        
+        // Calculate average score by iterating through completed rounds
+        const playerRounds = updatedRounds.slice(0, index + 1);
+        const sumOfScores = playerRounds.reduce((sum, r) => {
+          const playerScore = r.scores.find(s => s.id === score.id);
+          return sum + (playerScore ? playerScore.roundScore : 0);
+        }, 0);
+        stats.avgScore = playerRounds.length > 0 ? sumOfScores / playerRounds.length : 0;
+        
+        if (isNaN(stats.avgScore)) {
+          stats.avgScore = 0;
+        }
+        
+        stats.bestRound = Math.min(stats.bestRound, roundScore);
+        stats.worstRound = Math.max(stats.worstRound, roundScore);
+        stats.maxRoundScore = Math.max(stats.maxRoundScore || 0, roundScore);
+        
+        const isLowest = minRoundScore === roundScore;
+        const isHighest = maxRoundScore === roundScore;
+        
+        if (isLowest) {
+          stats.roundsWon = (stats.roundsWon || 0) + 1;
+        }
+        
+        stats.currentLowStreak = isLowest ? stats.currentLowStreak + 1 : 0;
+        stats.currentHighStreak = isHighest ? stats.currentHighStreak + 1 : 0;
+        stats.lowStreak = Math.max(stats.lowStreak, stats.currentLowStreak);
+        stats.highStreak = Math.max(stats.highStreak, stats.currentHighStreak);
+        
+        if (isHighest) {
+          stats.hadHighestScoreInGame = true;
+        }
+        
+        const currentTotals = roundScores.map(s => ({ id: s.id, total: s.totalScore }));
+        const maxTotal = Math.max(...currentTotals.map(t => t.total));
+        if (score.totalScore === maxTotal && currentTotals.filter(t => t.total === maxTotal).length === 1) {
+          stats.wasInLastPlace = true;
+        }
+        
+        if (stats.lastRoundScore !== null && roundScore < stats.lastRoundScore) {
+          stats.currentImprovementStreak = (stats.currentImprovementStreak || 0) + 1;
+          stats.improvementStreak = Math.max(stats.improvementStreak || 0, stats.currentImprovementStreak);
+        } else if (stats.lastRoundScore !== null && roundScore >= stats.lastRoundScore) {
+          stats.currentImprovementStreak = 0;
+        }
+        stats.lastRoundScore = roundScore;
+        
+        // Check for achievements (using Set for O(1) lookups)
+        const playerAchievements = newAchievements[score.id];
+        
+        if (roundScore === 0) {
+          stats.perfectRounds++;
+          if (!playerAchievements.has('Perfect Round')) {
+            playerAchievements.add('Perfect Round');
+          }
+        }
+        
+        if (stats.currentLowStreak === 3 && !playerAchievements.has('Hot Streak')) {
+          playerAchievements.add('Hot Streak');
+        }
+        
+        if (stats.currentLowStreak === 5 && !playerAchievements.has('Ice Cold')) {
+          playerAchievements.add('Ice Cold');
+        }
+        
+        if (stats.avgScore < 10 && stats.totalRoundsPlayed >= 3 && !playerAchievements.has('Consistency King')) {
+          playerAchievements.add('Consistency King');
+        }
+        
+        if (previousRound && isLowest) {
+          const prevPlayerScore = previousRound.scores.find(s => s.id === score.id);
+          const prevMaxScore = Math.max(...previousRound.scores.map(s => s.roundScore));
+          if (prevPlayerScore && prevPlayerScore.roundScore === prevMaxScore && !playerAchievements.has('Comeback Kid')) {
+            playerAchievements.add('Comeback Kid');
+          }
+        }
+        
+        if (isFirstRound && isLowest && !playerAchievements.has('Early Bird')) {
+          playerAchievements.add('Early Bird');
+        }
+        
+        if (stats.currentImprovementStreak >= 3 && !playerAchievements.has('Rising Star')) {
+          playerAchievements.add('Rising Star');
+        }
+        
+        if (stats.perfectRounds >= 3 && !playerAchievements.has('Speed Demon')) {
+          playerAchievements.add('Speed Demon');
+        }
+        
+        if (stats.perfectRounds >= 5 && !playerAchievements.has('Sharpshooter')) {
+          playerAchievements.add('Sharpshooter');
+        }
+      });
+    });
+    
+    // Convert Sets back to arrays for achievements state
+    const achievementsArray = {};
+    Object.keys(newAchievements).forEach(playerId => {
+      achievementsArray[playerId] = Array.from(newAchievements[playerId]);
+    });
+    
+    setPlayerStats(newStats);
+    setAchievements(achievementsArray);
+    setPlayers(resetPlayers);
+  };
+
+  // Finalize edited round scores
+  const finishEditRound = () => {
+    const roundToEdit = rounds[editingRoundIndex];
+    
+    // Create updated scores with new round scores but keeping player references
+    const updatedScores = roundToEdit.scores.map(score => ({
+      ...score,
+      roundScore: parseInt(currentRoundScores[score.id] || '0', 10)
+    }));
+    
+    // Update the specific round
+    const updatedRounds = [...rounds];
+    updatedRounds[editingRoundIndex] = {
+      ...roundToEdit,
+      scores: updatedScores
+    };
+    
+    // Recalculate everything from scratch
+    setRounds(updatedRounds);
+    recalculateGameState(updatedRounds);
+    
+    // Close modal and reset editing state
+    setIsEditScoresModalVisible(false);
+    setEditingRoundIndex(null);
+  };
+
   // Add Statistics Section to render method
   const renderStatistics = () => {
     if (players.length === 0) return null;
@@ -766,6 +955,13 @@ const FiveCrownsScorekeeper = () => {
                       <p className="text-white/40 text-xs">Dealer: {round.dealer}</p>
                     </div>
                   </div>
+                  <button
+                    onClick={() => beginEditRound(rounds.length - 1 - index)} // Convert from reversed display order to actual round index
+                    className="p-2 rounded-lg text-white/40 hover:text-primary-400 hover:bg-primary-500/10 transition-all duration-200"
+                    title="Edit scores"
+                  >
+                    <Edit className="h-5 w-5" />
+                  </button>
                 </div>
                 <div className="space-y-2">
                   {round.scores
@@ -876,6 +1072,57 @@ const FiveCrownsScorekeeper = () => {
               </button>
               <button 
                 onClick={() => setIsEnterScoresModalVisible(false)}
+                className="flex-1 btn-secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Scores Modal */}
+      {isEditScoresModalVisible && editingRoundIndex !== null && (
+        <div className="modal-overlay">
+          <div className="modal-content max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white flex items-center">
+                <Edit className="mr-3 h-6 w-6 text-primary-400" />
+                Edit Round {rounds[editingRoundIndex].roundNumber}
+              </h2>
+              <div className="wild-badge">
+                {rounds[editingRoundIndex].wildCard}
+              </div>
+            </div>
+            <div className="space-y-4 mb-6">
+              {rounds[editingRoundIndex].scores.map(score => (
+                <div 
+                  key={score.id} 
+                  className="flex justify-between items-center p-4 rounded-xl bg-white/5"
+                >
+                  <span className="font-semibold text-white">{score.name}</span>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={currentRoundScores[score.id]}
+                    onChange={(e) => updatePlayerScore(score.id, e.target.value)}
+                    className="w-24 bg-white/10 border border-white/20 text-white text-right px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button 
+                onClick={finishEditRound}
+                className="flex-1 btn-gradient"
+              >
+                Save Changes
+              </button>
+              <button 
+                onClick={() => {
+                  setIsEditScoresModalVisible(false);
+                  setEditingRoundIndex(null);
+                }}
                 className="flex-1 btn-secondary"
               >
                 Cancel
